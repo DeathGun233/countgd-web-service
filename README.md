@@ -11,13 +11,10 @@ CountGD
 - ✅ Web 界面：拖拽上传、实时预览、结果可视化
 - ✅ 容器化部署：Docker 一键启动
 
+## CountGD原文指引 ##：
+github：https://github.com/niki-amini-naieni/CountGD
+paper：https://arxiv.org/abs/2407.04619
 ## 🚀 快速开始
-
-### 环境要求
-- Python 3.8+
-- PyTorch 1.10+
-- CUDA（可选，推荐）
-- Docker（可选）
 
 ### 1. 安装依赖
 ```bash
@@ -109,7 +106,7 @@ CORS 跨域、静态文件路由、参数验证等部署问题
 
 ## 📂 项目结构
 ```
-fish_count_deploy/
+count_deploy/
 ├── app.py                  # FastAPI 主程序
 ├── models/                 # 模型文件目录
 │   └── checkpoint_best_regular.pth  (需下载)
@@ -127,7 +124,7 @@ fish_count_deploy/
 
 ## 🎓 项目背景
 
-本项目为个人毕业设计的工程化部分，完成了：
+为了实现多人计数，不局限于在服务器指令进行计数，方便操作，完成了：
 - 模型推理系统开发
 - Web 服务架构设计
 - 前端交互界面开发
@@ -139,7 +136,7 @@ fish_count_deploy/
 
 - [ ] 模型文件过大，需要单独下载
 - [ ] 首次推理较慢（模型加载需要时间）
-- [ ] GPU 内存需求较大（约 2GB）
+- [ ] 本地启动需要一定的GPU内存(测试了好几遍，正常电脑都能用)
 
 ## 🤝 贡献
 
@@ -149,10 +146,5 @@ fish_count_deploy/
 
 MIT License
 
-## 👨‍💻 作者
-
-[你的名字] - [你的邮箱]
-
----
 
 ⭐ 如果这个项目对你有帮助，请给个 Star！
