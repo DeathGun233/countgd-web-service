@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CountGD 计数系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .input-section {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            position: relative;
+            min-height: 200px;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f9ff;
+        }
+        
+        .upload-area.has-image {
+            border-color: #4caf50;
+            background: #f1f8f4;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .upload-text {
+            color: #666;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .preview-container {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .preview-container.show {
+            display: block;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .image-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 20px;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: #ccc;
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+        }
+        
+        .count {
+            font-size: 48px;
+            font-weight: bold;
+            color: #764ba2;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .detail-item {
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        .detail-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .detail-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #ffe6e6;
+            color: #d32f2f;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .clear-btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            width: auto;
+        }
+        
+        .clear-btn:hover {
+            background: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐟 开源计数系统</h1>
+        
+        <!-- 文本提示输入 -->
+        <div class="input-section">
+            <label for="textPrompt">文本描述</label>
+            <input type="text" id="textPrompt" placeholder="例如: fish, person, car..." value="fish">
+        </div>
+        
+        <!-- 图片上传区域 -->
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📸</div>
+            <p class="upload-text">点击选择图片或拖拽到这里</p>
+            <p style="font-size: 12px; color: #999; margin-top: 10px;">
+                支持 JPG、PNG 格式
+            </p>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+        
+        <!-- 图片预览 -->
+        <div class="preview-container" id="previewContainer">
+            <img id="previewImage" class="preview-image" alt="预览">
+            <div class="image-info" id="imageInfo"></div>
+            <button class="clear-btn" id="clearBtn">清除图片</button>
+        </div>
+        
+        <button id="predictBtn" disabled>开始计数</button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #666;">正在分析...</p>
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="result" id="result">
+            <h3>检测结果</h3>
+            <div class="count" id="count">-- 条</div>
+            
+            <div class="details">
+                <div class="detail-item">
+                    <div class="detail-label">推理时间</div>
+                    <div class="detail-value" id="inferenceTime">--</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">检测数量</div>
+                    <div class="detail-value" id="detectionCount">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const textPrompt = document.getElementById('textPrompt');
+        const predictBtn = document.getElementById('predictBtn');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const result = document.getElementById('result');
+        const count = document.getElementById('count');
+        const inferenceTime = document.getElementById('inferenceTime');
+        const detectionCount = document.getElementById('detectionCount');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const imageInfo = document.getElementById('imageInfo');
+        const clearBtn = document.getElementById('clearBtn');
+        
+        let selectedFile = null;
+        
+        // ========== 点击上传区域 ==========
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // ========== 文件选择 ==========
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+        
+        // ========== 拖拽上传 ==========
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#764ba2';
+            uploadArea.style.background = '#f8f9ff';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#667eea';
+            uploadArea.style.background = '';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#667eea';
+            uploadArea.style.background = '';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        // ========== 处理文件 ==========
+        function handleFile(file) {
+            console.log('选择的文件:', file);
+            
+            // 验证文件类型
+            if (!file.type.startsWith('image/')) {
+                showError('请选择有效的图片文件（JPG、PNG）');
+                return;
+            }
+            
+            // 验证文件大小（最大10MB）
+            if (file.size > 10 * 1024 * 1024) {
+                showError('图片文件过大（最大10MB）');
+                return;
+            }
+            
+            selectedFile = file;
+            
+            // 显示预览
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                console.log('图片加载成功');
+                
+                // 设置预览图片
+                previewImage.src = e.target.result;
+                
+                // 显示图片信息
+                const sizeKB = (file.size / 1024).toFixed(2);
+                imageInfo.textContent = `文件名: ${file.name} | 大小: ${sizeKB} KB`;
+                
+                // 显示预览容器
+                previewContainer.classList.add('show');
+                
+                // 更新上传区域样式
+                uploadArea.classList.add('has-image');
+                
+                // 启用预测按钮
+                predictBtn.disabled = false;
+                
+                // 隐藏结果和错误
+                result.classList.remove('show');
+                error.classList.remove('show');
+            };
+            
+            reader.onerror = () => {
+                console.error('图片读取失败');
+                showError('图片读取失败，请重试');
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        // ========== 清除图片 ==========
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearImage();
+        });
+        
+        function clearImage() {
+            selectedFile = null;
+            fileInput.value = '';
+            previewContainer.classList.remove('show');
+            uploadArea.classList.remove('has-image');
+            predictBtn.disabled = true;
+            result.classList.remove('show');
+            error.classList.remove('show');
+        }
+        
+        // ========== 开始预测 ==========
+        predictBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                showError('请先选择图片');
+                return;
+            }
+            
+            // 显示加载状态
+            loading.classList.add('show');
+            result.classList.remove('show');
+            error.classList.remove('show');
+            predictBtn.disabled = true;
+            
+            // 创建 AbortController 用于超时控制
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+            
+            try {
+                // 构建 FormData
+                const formData = new FormData();
+                formData.append('image', selectedFile);
+                formData.append('text_prompt', textPrompt.value.trim() || 'fish');
+                formData.append('mode', 'text_only');
+                
+                console.log('📤 发送请求到: http://localhost:8000/predict');
+                console.log('📁 图片文件:', selectedFile.name, `(${selectedFile.size} bytes)`);
+                console.log('🔤 文本提示:', textPrompt.value);
+                
+                // 发送请求
+                const startTime = Date.now();
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal, // 添加超时控制
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    // 不设置 mode，让浏览器自动处理
+                });
+                
+                clearTimeout(timeoutId);
+                
+                const endTime = Date.now();
+                console.log(`📨 收到响应，耗时: ${endTime - startTime}ms`);
+                console.log('📊 响应状态:', response.status, response.statusText);
+                
+                // 检查响应状态
+                if (!response.ok) {
+                    let errorText = '';
+                    try {
+                        const errorData = await response.json();
+                        errorText = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+                    } catch {
+                        errorText = `HTTP ${response.status}: ${response.statusText}`;
+                    }
+                    throw new Error(errorText);
+                }
+                
+                // 解析响应数据
+                const data = await response.json();
+                console.log('✅ 响应数据:', data);
+                
+                if (data.success) {
+                    // 显示结果
+                    count.textContent = `${data.count} 条`;
+                    inferenceTime.textContent = `${data.inference_time_ms.toFixed(1)} ms`;
+                    detectionCount.textContent = data.count;
+                    
+                    result.classList.add('show');
+                    console.log('🎉 预测成功，计数:', data.count);
+                } else {
+                    // 显示服务器返回的错误
+                    showError(data.error || '预测失败');
+                }
+                
+            } catch (err) {
+                console.error('❌ 请求错误详情:', err);
+                
+                // 根据错误类型显示不同的错误信息
+                let errorMessage = err.message;
+                
+                if (err.name === 'AbortError') {
+                    errorMessage = '请求超时（30秒），请稍后重试';
+                } else if (err.message.includes('Failed to fetch')) {
+                    errorMessage = '无法连接到服务器，请检查：\n1. 后端服务是否运行\n2. 端口8000是否被占用';
+                } else if (err.message.includes('NetworkError')) {
+                    errorMessage = '网络错误，请检查网络连接';
+                } else if (err.message.includes('CORS')) {
+                    errorMessage = '跨域请求被阻止，请检查CORS配置';
+                }
+                
+                showError(errorMessage);
+            } finally {
+                clearTimeout(timeoutId);
+                loading.classList.remove('show');
+                predictBtn.disabled = false;
+            }
+        });
+        
+        // ========== 显示错误 ==========
+        function showError(message) {
+            error.textContent = `❌ ${message}`;
+            error.classList.add('show');
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                error.classList.remove('show');
+            }, 3000);
+        }
+        
+        // ========== 页面加载完成 ==========
+        console.log('页面加载完成');
+        console.log('API地址: http://localhost:8000');
+    </script>
+</body>
+</html>

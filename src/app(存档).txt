@@ -1,0 +1,223 @@
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import torch
+import numpy as np
+import cv2
+import os
+import time
+import json
+
+# 创建FastAPI应用
+app = FastAPI(
+    title="CountGD 鱼群计数API",
+    description="基于CountGD的鱼群计数服务",
+    version="1.0.0"
+)
+
+# 添加CORS中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 检查并创建frontend目录
+FRONTEND_DIR = "frontend"
+if not os.path.exists(FRONTEND_DIR):
+    os.makedirs(FRONTEND_DIR)
+    print(f"创建了前端目录: {FRONTEND_DIR}")
+
+
+# 挂载静态文件
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+# 全局变量：模型和state_dict
+model_state_dict = None
+device = None
+
+@app.get("/")
+async def redirect_to_frontend():
+    return RedirectResponse(url="/static/index.html")
+
+
+@app.on_event("startup")
+async def load_model():
+    """应用启动时加载模型"""
+    global model_state_dict, device
+    
+    # 选择设备
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"使用设备: {device}")
+    
+    # 加载量化后的checkpoint
+    checkpoint_path = "/home/Yjh/fish_count_deploy/models/checkpoint_best_regular.pth"
+    
+    if not os.path.exists(checkpoint_path):
+        print(f"⚠ 警告: 找不到模型文件 {checkpoint_path}")
+        print(f"   将使用原始模型")
+        checkpoint_path = "models/checkpoint_best_regular.pth"
+    
+    print(f"加载模型: {checkpoint_path}")
+    
+    try:
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        
+        # 提取state_dict
+        if isinstance(checkpoint, dict):
+            if 'model' in checkpoint:
+                model_state_dict = checkpoint['model']
+            elif 'model_state_dict' in checkpoint:
+                model_state_dict = checkpoint['model_state_dict']
+            else:
+                model_state_dict = checkpoint
+        else:
+            model_state_dict = checkpoint
+        
+        print(f"✓ 模型加载成功")
+        print(f"  参数数量: {len(model_state_dict)}")
+        
+    except Exception as e:
+        print(f"✗ 模型加载失败: {e}")
+        raise
+
+def preprocess_image(image_bytes: bytes, target_size=(512, 512)):
+    """
+    图像预处理
+    
+    Args:
+        image_bytes: 图像字节流
+        target_size: 目标尺寸
+    
+    Returns:
+        processed_image: 预处理后的numpy数组
+        original_size: 原始图像尺寸
+    """
+    # 读取图像
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    
+    if image is None:
+        raise ValueError("Invalid image format")
+    
+    original_size = image.shape[:2]  # (H, W)
+    
+    # Resize
+    image = cv2.resize(image, target_size)
+    
+    # BGR to RGB
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+    # 归一化 [0, 255] -> [0, 1]
+    image = image.astype(np.float32) / 255.0
+    
+    # 标准化
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    image = (image - mean) / std
+    
+    # HWC -> CHW
+    image = np.transpose(image, (2, 0, 1))
+    
+    # 添加batch维度
+    image = np.expand_dims(image, axis=0)
+    
+    return image, original_size
+
+def simple_count_estimation(image_tensor):
+    """
+    简单的计数估算（不使用完整模型）
+    
+    注：这是一个占位函数
+    实际部署时需要：
+    1. 使用完整的CountGD模型进行推理
+    2. 或者使用预训练的密度图生成网络
+    
+    当前实现：基于图像特征的简单估算
+    """
+    # 转为numpy
+    img = image_tensor[0].transpose(1, 2, 0)  # CHW -> HWC
+    
+    # 简单的启发式估算（仅作示例）
+    # 实际应该使用训练好的模型
+    
+    # 计算图像的平均亮度和对比度
+    gray = cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
+    avg_brightness = np.mean(gray)
+    contrast = np.std(gray)
+    
+    # 简单的估算公式（需要替换为实际模型）
+    estimated_count = int(avg_brightness * contrast / 10)
+    
+    return max(1, min(estimated_count, 500))  # 限制在1-500范围
+
+@app.get("/")
+async def root():
+    """根路径"""
+    return {
+        "message": "CountGD 鱼群计数API",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "predict": "/predict"
+        }
+    }
+
+@app.get("/health")
+async def health_check():
+    """健康检查"""
+    if model_state_dict is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    
+    return {
+        "status": "healthy",
+        "model_loaded": True,
+        "device": str(device),
+        "timestamp": time.time()
+    }
+
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
+    """
+    单图预测接口
+    
+    Args:
+        file: 上传的图片文件
+    
+    Returns:
+        JSON响应，包含预测的鱼群数量
+    """
+    start_time = time.time()
+    
+    try:
+        # 1. 读取图片
+        image_bytes = await file.read()
+        
+        # 2. 预处理
+        input_data, original_size = preprocess_image(image_bytes)
+        
+        # 3. 推理（占位实现）
+        # TODO: 使用真实的CountGD模型
+        count = simple_count_estimation(input_data)
+        
+        # 4. 计算耗时
+        inference_time = (time.time() - start_time) * 1000  # ms
+        
+        return {
+            "success": True,
+            "count": count,
+            "inference_time_ms": round(inference_time, 2),
+            "original_size": original_size,
+            "note": "当前使用简化估算，实际部署需替换为CountGD模型"
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
