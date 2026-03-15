@@ -1,4 +1,3 @@
-CountGD
 # CountGD 多模态计数 Web 服务
 
 基于 GroundingDINO 的多模态目标计数系统，支持 30+ 类别的文本/视觉多模态计数。
